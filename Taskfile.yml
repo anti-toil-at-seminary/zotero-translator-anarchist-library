@@ -1,0 +1,9 @@
+version: "3"
+vars:
+  SOURCE: "Anarchist Library.js"
+  DEST: "${HOME}/Zotero/translators/{{ .SOURCE }}"
+tasks:
+  install:
+    cmd: install -m 0644 '{{ .SOURCE }}' "{{ .DEST }}"
+  fetch:
+    cmd: cp "{{ .DEST }}" "{{ .SOURCE }}-fetched"
