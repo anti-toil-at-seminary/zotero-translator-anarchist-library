@@ -35,8 +35,9 @@ tasks:
         sh: git rev-parse --short HEAD
       COMMIT_MSG_BASE:
         sh: >
-          test -f '{{ .TARGET_FILE }}' && echo "Adding new translator {{ .SOURCE_FILE }}"
-          || echo "Updating translator {{ .SOURCE_FILE }}" 
+          test -f '{{ .TARGET_FILE }}' && echo "Updating translator {{ .SOURCE_FILE }}"
+          || echo "Adding new translator {{ .SOURCE_FILE }}" 
+      # TODO: Add source repo (remote origin) info to this
       COMMIT_MSG: '{{.COMMIT_MSG_BASE}} from {{ .THIS_BRANCH }} {{ .SOURCE_COMMIT }}'
     cmds:
       - install -m 0644 '{{ .SOURCE }}' '{{ .TARGET_FILE }}'
