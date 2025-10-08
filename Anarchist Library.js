@@ -90,6 +90,7 @@ function doWeb(doc, url) {
 		
 		date = getPreambleVal(doc, "textdate")
 		let notes = getPreambleVal(doc, "preamblenotes")
+		// misses link here: https://theanarchistlibrary.org/library/margaret-killjoy-it-s-time-to-build-resilient-communities
 		let source = getPreambleVal(doc, "preamblesrc")
 
 		let tags = []
