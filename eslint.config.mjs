@@ -60,7 +60,7 @@ export default defineConfig([{
             name: "document",
             message: "Use doc instead.",
         }],
-
+        "@/no-mixed-spaces-and-tabs": "error",
         "zotero-translator/not-executable": "error",
         "zotero-translator/header-valid-json": "error",
         "zotero-translator/header-translator-id": "error",
