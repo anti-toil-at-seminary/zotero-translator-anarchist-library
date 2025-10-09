@@ -27,7 +27,7 @@ tasks:
           fi
       DEFAULT_TARGET_BRANCH:
         sh: >
-          test -n '{{ .TARGET_BRANCH_FROM_FILE }}' 
+          test -n '{{ .TARGET_BRANCH_FROM_FILE }}'
           && echo -n '{{ .TARGET_BRANCH_FROM_FILE }}'
           || echo -n '{{ .THIS_BRANCH }}'
       TARGET_BRANCH: '{{ .TARGET_BRANCH | default .DEFAULT_TARGET_BRANCH }}'
@@ -36,7 +36,7 @@ tasks:
       COMMIT_MSG_BASE:
         sh: >
           test -f '{{ .TARGET_FILE }}' && echo "Updating translator {{ .SOURCE_FILE }}"
-          || echo "Adding new translator {{ .SOURCE_FILE }}" 
+          || echo "Adding new translator {{ .SOURCE_FILE }}"
       # TODO: Add source repo (remote origin) info to this
       COMMIT_MSG: '{{.COMMIT_MSG_BASE}} from {{ .THIS_BRANCH }} {{ .SOURCE_COMMIT }}'
     cmds:
@@ -47,3 +47,11 @@ tasks:
         git rev-parse '{{ .TARGET_BRANCH }}' && git checkout '{{ .TARGET_BRANCH }}' || exit "branch {{ .TARGET_BRANCH }} does not exist"
         git add '{{ .SOURCE_FILE }}'
         git commit -m '{{ .COMMIT_MSG }}' && git push -u {{ .REMOTE }} {{ .TARGET_BRANCH }}
+  lint:
+    dir: .ci
+    cmds:
+      - ./lint.sh
+  ci-check:
+    dir: ".ci/pull-request-check"
+    cmds:
+      - ./check-pull-request.sh
