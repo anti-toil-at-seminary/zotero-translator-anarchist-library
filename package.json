@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+  },
+  "name": "zotero-translator-anarchist-library",
+  "description": "Zotero translator to better import items from the anarchist library",
+  "version": "0.1.0",
+  "main": "Anarchist Library.js",
+  "scripts": {
+		"test": "eslint .",
+		"lint": "eslint",
+		"lint:linter": "eslint --no-ignore .ci"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anti-toil-at-seminary/zotero-translator-anarchist-library.git"
+  },
+  "keywords": [
+    "zotero"
+  ],
+  "author": "Dandelion Good",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/anti-toil-at-seminary/zotero-translator-anarchist-library/issues"
+  },
+	"devDependencies": {
+		"@zotero/eslint-config": "^1.0.8",
+		"clarinet": "^0.12.6",
+		"eslint": "^9.22.0",
+		"eslint-plugin-zotero-translator": "file:.ci/eslint-plugin-zotero-translator",
+		"selenium-webdriver": "^4.34.0"
+	},
+  "homepage": "https://github.com/anti-toil-at-seminary/zotero-translator-anarchist-library#readme"
+}
