@@ -4,6 +4,8 @@ vars:
   SOURCE_FILE: '{{ base .SOURCE }}'
   DEST: "${HOME}/Zotero/translators/{{ .SOURCE }}"
 tasks:
+  clean:
+    cmd: rm -rf .ci/pull-request-check/connectors
   install:
     cmd: install -m 0644 '{{ .SOURCE }}' "{{ .DEST }}"
   fetch:
