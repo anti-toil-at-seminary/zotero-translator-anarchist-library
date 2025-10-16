@@ -41,12 +41,16 @@ tasks:
           || echo "Adding new translator {{ .SOURCE_FILE }}"
       # TODO: Add source repo (remote origin) info to this
       COMMIT_MSG: '{{.COMMIT_MSG_BASE}} from {{ .THIS_BRANCH }} {{ .SOURCE_COMMIT }}'
+      CREATE_MISSING_BRANCH: '{{ .CREATE_MISSING_BRANCH | default "YES" }}'
+      doesnt_exist_error: sh -c 'echo "branch {{ .TARGET_BRANCH }} does not exist" && exit 13'
+      checkout_new_branch: git checkout -b '{{.TARGET_BRANCH}}'
+      IF_MISSING_BRANCH: '{{ if eq .CREATE_MISSING_BRANCH "YES" }}{{ .checkout_new_branch }}{{ else }}{{ .doesnt_exist_error }}{{ end }}'
     cmds:
       - install -m 0644 '{{ .SOURCE }}' '{{ .TARGET_FILE }}'
       - |
         cd {{ .UPSTREAM_REPO }}
         current_branch="$(git branch --show-current)"
-        git rev-parse '{{ .TARGET_BRANCH }}' && git checkout '{{ .TARGET_BRANCH }}' || exit "branch {{ .TARGET_BRANCH }} does not exist"
+        git rev-parse '{{ .TARGET_BRANCH }}' && git checkout '{{ .TARGET_BRANCH }}' || {{ .IF_MISSING_BRANCH }}
         git add '{{ .SOURCE_FILE }}'
         git commit -m '{{ .COMMIT_MSG }}' && git push -u {{ .REMOTE }} {{ .TARGET_BRANCH }}
   lint:
