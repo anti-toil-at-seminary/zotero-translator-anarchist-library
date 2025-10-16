@@ -51,7 +51,7 @@ function getListItems(doc) {
 	let items = {};
 	let results = doc.querySelectorAll('a.list-group-item');
 	for (let i = 0; i < results.length; i++) {
-		items[results[i].href] = ZU.triminternal(text(results[i], "strong"));
+		items[results[i].href] = ZU.trimInternal(text(results[i], "strong"));
 	}
 	return items;
 }
@@ -60,7 +60,7 @@ function getSearchItems(doc) {
 	let items = {};
 	let results = doc.querySelectorAll('a.list-group-item');
 	for (let i = 0; i < results.length; i++) {
-		items[results[i].href] = ZU.triminternal(text(results[i], "strong"));
+		items[results[i].href] = ZU.trimInternal(text(results[i], "strong"));
 	}
 	return items;
 }
@@ -116,10 +116,10 @@ async function doLibraryItem(doc, url = doc.location.href) {
 	item.tags = tags;
 	item.date = date;
 	if (notes) {
-		item.notes.push({ note: ZU.triminternal(notes) });
+		item.notes.push({ note: ZU.trimInternal(notes) });
 	}
 	if (source) {
-		item.notes.push({ note: `Source: ${ZU.triminternal(source)}` });
+		item.notes.push({ note: `Source: ${ZU.trimInternal(source)}` });
 	}
 	item.attachments = [{
 		document: doc,
