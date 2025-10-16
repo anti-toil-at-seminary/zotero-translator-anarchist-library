@@ -281,7 +281,7 @@ var testCases = [
 					}
 				],
 				"date": "1914",
-				"language": "English",
+				"language": "en",
 				"url": "https://theanarchistlibrary.org/library/errico-malatesta-the-general-strike-and-the-insurrection-in-italy",
 				"attachments": [
 					{
