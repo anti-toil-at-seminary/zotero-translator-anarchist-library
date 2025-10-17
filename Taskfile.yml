@@ -65,6 +65,10 @@ tasks:
     dir: .ci
     cmds:
       - ./lint.sh
+  lint-fix:
+    dir: .ci
+    cmds:
+      - ./lint.sh -- --fix
   ci-check:
     dir: ".ci/pull-request-check"
     cmds:
