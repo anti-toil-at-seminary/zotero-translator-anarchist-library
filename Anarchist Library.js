@@ -2,7 +2,7 @@
 	"translatorID": "1a31e4c5-22ed-4b5b-a75f-55476db29a44",
 	"label": "Anarchist Library",
 	"creator": "Sister Baæ'l",
-	"target": "https://theanarchistlibrary.org/(latest|library|stats/popular|category/topic|category/author|special/index|search)",
+	"target": "https://theanarchistlibrary\\.org/(latest|library|stats/popular|category/topic|category/author|special/index|search)",
 	"minVersion": "7.0",
 	"maxVersion": "",
 	"priority": 100,
@@ -41,47 +41,50 @@ This translator was developed by Dandelion Good.
 If you do any work on this translator, please add yourself here <3.
 */
 
-var urlBase = "https://theanarchistlibrary.org/";
+var allAttachmentTypes = {
+	"Plain PDF": { ext: ".pdf", mimeType: "application/pdf" },
+	"A4 PDF": { ext: ".a4.pdf", mimeType: "application/pdf" },
+	"Letter PDF": { ext: ".lt.pdf", mimeType: "application/pdf" },
+	EPub: { ext: ".epub", mimeType: "application/epub+zip" },
+	"Printer-friendly HTML": { ext: ".html", mimeType: "text/html" },
+	LaTeX: { ext: ".tex", mimeType: "application/x-tex" },
+	"Plain Text": { ext: ".muse", mimeType: "text/plain" },
+	"Source Zip:": { ext: ".zip", mimeType: "application/zip" },
+	Snapshot: { ext: "snapshot", mimeType: "text/html" }
+};
 
-// ToDo: Localization
-var languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
-
-function getListItems(doc) {
-	// todo copied from below
-	let items = {};
-	let results = doc.querySelectorAll('a.list-group-item');
-	for (let i = 0; i < results.length; i++) {
-		items[results[i].href] = ZU.triminternal(text(results[i], "strong"));
+function getSearchResults(doc, checkOnly) {
+	var items = {};
+	var found = false;
+	var rows = doc.querySelectorAll("a.list-group-item");
+	for (let row of rows) {
+		let href = row.href;
+		let title = ZU.trimInternal(text(row, "strong"));
+		if (!href || !title) continue;
+		if (checkOnly) return true;
+		found = true;
+		items[href] = title;
 	}
-	return items;
+	return found ? items : false;
 }
 
-function getSearchItems(doc) {
-	let items = {};
-	let results = doc.querySelectorAll('a.list-group-item');
-	for (let i = 0; i < results.length; i++) {
-		items[results[i].href] = ZU.triminternal(text(results[i], "strong"));
-	}
-	return items;
-}
-
-async function doLibraryItem(doc, url = doc.location.href) {
+async function scrape(doc, url = doc.location.href) {
 	// ToDo: get fancier here, allow other types
-	let item = new Zotero.Item('webpage');
+	let item = new Zotero.Item('manuscript');
 
-	let language = languageNames.of(attr(doc, "html", "lang"));
+	// These may be expanded on in the future
+	let attachmentTypes = {
+		PDF: allAttachmentTypes["Plain PDF"],
+	};
 
-	item.accessed = new Date().toString();
 	item.url = url;
-	item.language = language;
+	item.language = attr(doc, "html", "lang");
 
 	let itemType = attr(doc, '[property~="og:type"]', 'content');
-	const tagNodeList = doc.querySelectorAll(`[property~="og:${itemType}:tag"]`);
+	let tagNodeList = doc.querySelectorAll(`[property~="og:${itemType}:tag"]`);
 	let description = attr(doc, '[property~="og:description"]', 'content');
 	let author = attr(doc, `[property~="og:${itemType}:author"]`, 'content');
-	let authorFirstName = author.substring(0, author.indexOf(' '));
-	let authorLastName = author.substring(author.indexOf(' ') + 1);
-	item.creators.push({ creatorType: "author", firstName: authorFirstName, lastName: authorLastName });
+	item.creators.push(ZU.cleanAuthor(author, "author"));
 
 	if (description) {
 		item.description = description;
@@ -89,15 +92,7 @@ async function doLibraryItem(doc, url = doc.location.href) {
 		let re = /(?<=[Tt]ranslated(?: +to [Ee]nglish)? +by ).*$/u;
 		let translatedMatch = description.match(re);
 		if (translatedMatch) {
-			let translator = { creatorType: "translator" };
-			if (translatedMatch[0].match(/ /)) {
-				translator.firstName = translatedMatch[0].substring(0, translatedMatch.indexOf(' '));
-				translator.lastName = translatedMatch[0].substring(translatedMatch.indexOf(' ') + 1);
-			}
-			else {
-				translator.lastName = translatedMatch[0];
-			}
-			item.creators.push(translator);
+			item.creators.push(ZU.cleanAuthor(translatedMatch[0], "translator", translatedMatch[0].includes(",")));
 		}
 	}
 
@@ -106,59 +101,47 @@ async function doLibraryItem(doc, url = doc.location.href) {
 	// misses link here: https://theanarchistlibrary.org/library/margaret-killjoy-it-s-time-to-build-resilient-communities
 	let source = getPreambleVal(doc, "preamblesrc");
 
-	let tags = [];
-	for (let i = 0; i < tagNodeList.length; i++) {
-		tags = tags.concat(tagNodeList[i].content);
+	for (let tagNode of tagNodeList) {
+		item.tags.push({ tag: tagNode.content });
 	}
 
 	let title = attr(doc.head, '[property~="og:title"][content]', 'content');
 	item.title = title;
-	item.tags = tags;
 	item.date = date;
 	if (notes) {
-		item.notes.push({ note: ZU.triminternal(notes) });
+		item.notes.push({ note: ZU.trimInternal(notes) });
 	}
 	if (source) {
-		item.notes.push({ note: `Source: ${ZU.triminternal(source)}` });
+		item.notes.push({ note: `Source: ${ZU.trimInternal(source)}` });
 	}
-	item.attachments = [{
-		document: doc,
-		title: "Snapshot",
-		snapshot: true
-	},
-	{
-		title: "Epub",
-		url: `${doc.location.href}.epub`
-	},
-	// ToDo: Do this conditionally
-	{
-		title: "Latex",
-		url: `${doc.location.href}.tex`
-	}];
-	return item.complete();
+
+	for (let [typeName, typeInfo] of Object.entries(attachmentTypes)) {
+		let attachment = {
+			title: typeName,
+			url: `${doc.location.href}${typeInfo.ext}`,
+			mimeType: typeInfo.mimeType
+		};
+
+		if (typeInfo.ext == "snapshot") {
+			attachment.document = doc;
+		}
+
+		item.attachments.push(attachment);
+	}
+
+	item.complete();
 }
 
-var listRe = new RegExp(String.raw`${urlBase}(category/topic/|category/author/|latest|popular)`);
-var searchRe = new RegExp(String.raw`${urlBase}search?`);
-var libraryRe = new RegExp(String.raw`library/`);
-
-
-var matchers = {
-	list: { matcher: listRe, type: "multiple", do: null, get: getListItems },
-	search: { matcher: searchRe, type: "multiple", do: null, get: getSearchItems },
-	document: { matcher: libraryRe, type: "webpage", do: doLibraryItem, get: null }
-};
+var libraryRe = /library\//;
 
 
 function detectWeb(doc, url) {
-	// ToDo: Error handling
-	// ToDo: let itemType = doc.head.querySelector('[property~="og:type"]').content;
-	for (const matcherConfig of Object.values(matchers)) {
-		if (url.match(matcherConfig.matcher)) {
-			return matcherConfig.type;
-		}
+	if (libraryRe.test(url)) {
+		return 'manuscript';
 	}
-
+	else if (getSearchResults(doc, true)) {
+		return 'multiple';
+	}
 	return false;
 }
 
@@ -168,33 +151,28 @@ function getPreambleVal(doc, id) {
 }
 
 async function doWeb(doc, url) {
-	// ToDo: localize this
-	for (const matcherConfig of Object.values(matchers)) {
-		if (url.match(matcherConfig.matcher)) {
-			if (matcherConfig.type == "multiple") {
-				let items = await Zotero.selectItems(matcherConfig.get(doc));
-				if (!items) break;
-				for (let url of Object.keys(items)) {
-					await doLibraryItem(await requestDocument(url));
-				}
-			}
-			else {
-				await matcherConfig.do(doc, url);
-			}
-			break;
+	if (detectWeb(doc, url) == 'multiple') {
+		let items = await Zotero.selectItems(getSearchResults(doc, false));
+		if (!items) return;
+		for (let url of Object.keys(items)) {
+			await scrape(await requestDocument(url));
 		}
+	}
+	else {
+		await scrape(doc, url);
 	}
 }
 
 
 /** BEGIN TEST CASES **/
+
 var testCases = [
 	{
 		"type": "web",
 		"url": "https://theanarchistlibrary.org/library/abel-paz-durruti-in-the-spanish-revolution",
 		"items": [
 			{
-				"itemType": "webpage",
+				"itemType": "manuscript",
 				"title": "Durruti in the Spanish Revolution",
 				"creators": [
 					{
@@ -204,24 +182,17 @@ var testCases = [
 					},
 					{
 						"creatorType": "translator",
-						"firstName": "",
-						"lastName": "Chuck Morse"
+						"firstName": "Chuck",
+						"lastName": "Morse"
 					}
 				],
 				"date": "1996",
 				"url": "https://theanarchistlibrary.org/library/abel-paz-durruti-in-the-spanish-revolution",
-				"language": "English",
+				"language": "en",
 				"attachments": [
 					{
-						"title": "Snapshot",
-						"mimeType": "text/html",
-						"snapshot": true
-					},
-					{
-						"title": "Epub"
-					},
-					{
-						"title": "Latex"
+						"title": "PDF",
+						"mimeType": "application/pdf"
 					}
 				],
 				"tags": [
@@ -243,66 +214,18 @@ var testCases = [
 						"note": "Source: Published by AK Press in 2006 (please support the publisher!). Retrieved on 19th September 2020 from https://libcom.org/library/durruti-spanish-revolution"
 					}
 				],
-				"seeAlso": []
+				"seeAlso": [],
+				"libraryCatalog": "Anarchist Library"
 			}
 		]
 	},
-	{
-		"type": "web",
-		"url": "https://theanarchistlibrary.org/library/jp-o-malley-the-utopia-of-rules-david-graeber-interview",
-		"items": [
-			{
-				"itemType": "webpage",
-				"title": "The Utopia of Rules, David Graeber Interview",
-				"creators": [
-					{
-						"creatorType": "author",
-						"firstName": "JP",
-						"lastName": "O’ Malley"
-					}
-				],
-				"date": "1st April 2015",
-				"language": "English",
-				"url": "https://theanarchistlibrary.org/library/jp-o-malley-the-utopia-of-rules-david-graeber-interview",
-				"attachments": [
-					{
-						"title": "Snapshot",
-						"mimeType": "text/html",
-						"snapshot": true
-					},
-					{
-						"title": "Epub"
-					},
-					{
-						"title": "Latex"
-					}
-				],
-				"tags": [
-					{
-						"tag": "bureaucracy"
-					},
-					{
-						"tag": "interview"
-					}
-				],
-				"notes": [
-					{
-						"note": "JP O’ Malley interviews anthropologist, activist, anarchist and author, David Graeber, who was one of the early organisers of Occupy Wall Street."
-					},
-					{
-						"note": "Source: Retrieved on 15th October 2024 from bellacaledonia.org.uk"
-					}
-				],
-				"seeAlso": []
-			}
-		]
-	},
+
 	{
 		"type": "web",
 		"url": "https://theanarchistlibrary.org/library/errico-malatesta-the-general-strike-and-the-insurrection-in-italy",
 		"items": [
 			{
-				"itemType": "webpage",
+				"itemType": "manuscript",
 				"title": "The General Strike and the Insurrection in Italy",
 				"creators": [
 					{
@@ -312,19 +235,13 @@ var testCases = [
 					}
 				],
 				"date": "1914",
-				"language": "English",
+				"language": "en",
 				"url": "https://theanarchistlibrary.org/library/errico-malatesta-the-general-strike-and-the-insurrection-in-italy",
+				"libraryCatalog": "Anarchist Library",
 				"attachments": [
 					{
-						"title": "Snapshot",
-						"snapshot": true,
-						"mimeType": "text/html"
-					},
-					{
-						"title": "Epub"
-					},
-					{
-						"title": "Latex"
+						"title": "PDF",
+						"mimeType": "application/pdf"
 					}
 				],
 				"tags": [
@@ -355,51 +272,84 @@ var testCases = [
 	},
 	{
 		"type": "web",
-		"url": "https://theanarchistlibrary.org/library/voltairine-de-cleyre-report-of-the-work-of-the-chicago-mexican-liberal-defense-league",
+		"url": "https://theanarchistlibrary.org/library/ulrika-holgersson-britta-grondahl",
 		"items": [
 			{
-				"itemType": "webpage",
-				"title": "Report of the Work of the Chicago Mexican Liberal Defense League",
+				"title": "Britta Gröndahl",
+				"itemType": "manuscript",
 				"creators": [
 					{
-						"creatorType": "author",
-						"firstName": "Voltairine",
-						"lastName": "de Cleyre"
-					}
-				],
-				"date": "1912",
-				"language": "English",
-				"url": "https://theanarchistlibrary.org/library/voltairine-de-cleyre-report-of-the-work-of-the-chicago-mexican-liberal-defense-league",
-				"attachments": [
-					{
-						"title": "Snapshot",
-						"snapshot": true,
-						"mimeType": "text/html"
+						"firstName": "Ulrika",
+						"lastName": "Holgersson",
+						"creatorType": "author"
 					},
 					{
-						"title": "Epub"
-					},
-					{
-						"title": "Latex"
-					}
-				],
-				"tags": [
-					{
-						"tag": "Mexican revolution"
-					},
-					{
-						"tag": "history"
+						"firstName": "Alexia",
+						"lastName": "Grosjean",
+						"creatorType": "translator"
 					}
 				],
 				"notes": [
+					{ "note": "Translated by Alexia Grosjean." },
+					{ "note": "Source: Retrieved on 11th March 2025 from www.skbl.se" }
+				],
+				"tags": [
+					{ "tag": "Sweden" },
+					{ "tag": "biography" }
+				],
+				"date": "2018-03-08",
+				"seeAlso": [],
+				"libraryCatalog": "Anarchist Library",
+				"attachments": [
 					{
-						"note": "From ‘Mother Earth’, April 1912, New York City, published by Emma Goldman, edited by Alexander Berkman."
-					},
-					{
-						"note": "Source: Retrieved on 2024-02-02 from <mgouldhawke.wordpress.com/2024/02/01/report-of-the-work-of-the-chicago-mexican-liberal-defense-league-voltairine-de-cleyre-1912>"
+						"title": "PDF",
+						"mimeType": "application/pdf"
 					}
 				],
-				"seeAlso": []
+				"url": "https://theanarchistlibrary.org/library/ulrika-holgersson-britta-grondahl",
+				"language": "en"
+			}
+		]
+	},
+	{
+		"type": "web",
+		"url": "https://theanarchistlibrary.org/library/emile-armand-the-forerunners-of-anarchism",
+		"items": [
+			{
+				"itemType": "manuscript",
+				"title": "The Forerunners of Anarchism",
+				"creators": [
+					{
+						"creatorType": "author",
+						"firstName": "Emile",
+						"lastName": "Armand"
+					},
+					{
+						"creatorType": "translator",
+						"firstName": "",
+						"lastName": "Reddebrek"
+					}
+				],
+				"notes": [
+					{ "note": "Translated by Reddebrek." },
+					{ "note": "Source: Provided by the translator." }
+				],
+				"tags": [
+					{ "tag": "history" },
+					{ "tag": "individualism" },
+					{ "tag": "proto-anarchism" }
+				],
+				"date": "1933",
+				"seeAlso": [],
+				"libraryCatalog": "Anarchist Library",
+				"attachments": [
+					{
+						"title": "PDF",
+						"mimeType": "application/pdf"
+					}
+				],
+				"url": "https://theanarchistlibrary.org/library/emile-armand-the-forerunners-of-anarchism",
+				"language": "en"
 			}
 		]
 	},
